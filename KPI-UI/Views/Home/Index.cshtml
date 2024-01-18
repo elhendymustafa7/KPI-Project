@@ -1,0 +1,270 @@
+﻿
+
+<div id="head">
+    <h1>Survey System</h1>
+</div>
+
+<div id="survey-system">
+    <h2 style="color: #0E3241">Key Performance Indicator</h2>
+
+    <form id="department-form"  method="get" enctype="multipart/form-data">
+
+        <label  for="department-num">Department Num:</label>
+        <input type="number" id="department-num" name="departmentNum" value="departmentNum">
+
+        <button type="submit">Enter</button><br><br>
+    </form>
+
+    <button id="add-row">Add New Row</button>
+    <form id="form"  method="Post" enctype="multipart/form-data">
+        <table id="kpi-table">
+            <thead>
+                <tr>
+                    <th>Indicator Number</th>
+                    <th>Indicator Description</th>
+                    <th>Type</th>
+                    <th>Targeted Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            </tbody> 
+        </table>
+
+        <div id="total-row">
+            <label >Total:<span id="total-value">0</span></label>
+        </div>
+
+        <button id="new-button">New</button>
+        <button id="delete">Delete</button>
+        <button type="submit" id="save">Save</button>
+    </form>
+    
+
+</div>
+ 
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+
+    $("#department-form").submit(function (event) {
+
+        event.preventDefault();
+        var departmentNum = $("#department-num").val();
+
+        if (!departmentNum || isNaN(departmentNum) || departmentNum <= 0) {
+            alert("Please enter a valid Department Number.");
+            return;
+        }
+         
+        $.ajax({
+            type: "GET",
+            url: "/Home/GetKPIs",
+            data: { departmentNum: departmentNum },
+            success: function (res) {
+                console.log(res);
+                populateTable(res);
+                calculateTotal();
+            },
+            error: function () {
+                alert("Error occurred!!");
+            }
+        });
+    });
+
+    function populateTable(kpis) {
+        var tbody = $("#kpi-table tbody");
+         
+        tbody.empty();
+         
+        $.each(kpis, function (index, kpi) {
+            var row = createRow(index, kpi.kpidNum, kpi.kpidNescription, kpi.targetedValue, kpi.measurementUnit);
+            tbody.append(row);
+        });
+    }
+     
+    function createRow(index, num, description, targetedValue, measurementUnit) {
+        var row = $("<tr>");
+        row.html(`
+            <td><input type="number" name="KPIDNum${index + 1}" value="${num}" /></td>
+            <td><input type="text" name="KPIDNescription${index + 1}" value="${description}" /></td>
+                <td><input type="radio" name="type${index + 1}" value="Percentage" ${measurementUnit ? 'checked' : ''}>
+                    Percentage
+                    <input type="radio" name="type${index + 1}" value="Number" ${measurementUnit ? '' : 'checked'}>
+                    Number</td>
+            <td><input type="number" name="TargetedValue${index + 1}" class="targeted-value" value="${targetedValue}" /></td>
+        `);
+        return row;
+    }
+     
+    calculateTotal();
+     
+    $("#kpi-table tbody").on("input", ".targeted-value", function () {
+        updateTotal();
+    });
+     
+    $("#new").click(function () {
+        var rowCount = $("#kpi-table tbody tr").length;
+        var newRow = createRow(rowCount, '', '', '');
+        $("#kpi-table tbody").append(newRow);
+        updateTotal();
+    });
+
+    function calculateTotal() {
+        var total = 0;
+
+        $(".targeted-value").each(function () {
+            var val = parseFloat($(this).val()) || 0;
+            total += val;
+        });
+
+        $("#total-value").text(total);
+    }
+
+    function updateTotal() {
+        calculateTotal();
+    }
+
+    $("#add-row").click(function () {
+        var rowCount = $("#kpi-table tbody tr").length;
+        var newRow = createRow(rowCount, '', '', '');
+        $("#kpi-table tbody").append(newRow);
+
+        newButton.click(function () {
+            $(this).closest('tr').remove();
+            updateTotal();
+        });
+
+
+        updateTotal();
+    });
+
+    var deleteButtonClicked = false;
+    var newButtonClicked = false;
+
+    $("#form").submit(function (event) {
+            event.preventDefault();
+
+        if (deleteButtonClicked) {
+            // Reset the flag and return to avoid executing the save logic
+            deleteButtonClicked = false;
+            return;
+        }
+
+        if (newButtonClicked) {
+            // Reset the flag and return to avoid executing the save logic
+            newButtonClicked = false;
+            return;
+        }
+
+             isValid = true;
+
+            $("#kpi-table tbody tr").each(function (index, row) {
+                var kpidNum = $(row).find("input[name^='KPIDNum']").val();
+                var kpidDescription = $(row).find("input[name^='KPIDNescription']").val();
+                var targetedValue = $(row).find("input[name^='TargetedValue']").val();
+                var type = $(row).find("input[name^='type']:checked").val();
+
+                // Perform validation for each field (example: not empty)
+                if (!kpidNum || !kpidDescription || !targetedValue) {
+                    alert("Please fill in all fields in row " + (index + 1) + ".");
+                    isValid = false;
+                    return false; // Break out of the loop
+                }
+                if (type === 'Percentage' && (parseFloat(targetedValue) > 100 || parseFloat(targetedValue) < 0)) {
+                    console.log("heeeeere");
+                    alert("For Percentage type, targetedValue in row " + (index + 1) + " should be between 0 and 100.");
+                    isValid = false;
+                    return false; // Break out of the loop
+                }
+            });
+
+
+            if (!isValid) {
+                return;
+            }
+            else {
+
+                var kpiDataArray = [];
+
+                $("#kpi-table tbody tr").each(function () {
+                    var kpiData = {
+                        KPIDNum: $(this).find("input[name^='KPIDNum']").val(),
+                        KPIDNescription: $(this).find("input[name^='KPIDNescription']").val(),
+                        MeasurementUnit: $(this).find("input[name^='type']:checked").val() === 'Percentage',
+                        TargetedValue: $(this).find("input[name^='TargetedValue']").val(),
+                        DepNo: $("#department-num").val()
+                    };
+
+                    kpiDataArray.push(kpiData);
+                });
+
+                $.ajax({
+                    type: "POST",
+                    url: "/Home/SaveKPIs",
+                    contentType: "application/json", 
+                    data: JSON.stringify(kpiDataArray), 
+                    success: function (response) {
+                        console.log(response);
+                        alert(response.status);
+                        // alert("Saved success");
+                    },
+                    error: function (error) {
+                        console.error(error);
+                        alert("Saved failed");
+                    }
+                });
+            }
+
+    });
+
+    $("#delete").click(function () {
+        console.log("test");
+
+        var rowCount = $("#kpi-table tbody tr").length;
+        if (rowCount > 0) {
+            deleteButtonClicked = true; // Set the flag to true
+            // Set the flag to true
+            var lastRow = $("#kpi-table tbody tr:last");
+            var kpiData = {
+                KPIDNum: lastRow.find("input[name^='KPIDNum']").val(),
+                KPIDNescription: lastRow.find("input[name^='KPIDNescription']").val(),
+                MeasurementUnit: lastRow.find("input[name^='type']:checked").val() === 'Percentage',
+                TargetedValue: lastRow.find("input[name^='TargetedValue']").val(),
+                DepNo: $("#department-num").val()
+            };
+
+            // Make an AJAX call to delete the last row
+            $.ajax({
+                type: "DELETE",
+                url: "/Home/DeleteKPIs",
+                contentType: "application/json",
+                data: JSON.stringify(kpiData),
+                success: function (response) {
+                    console.log(response);
+                    alert(response.status);
+                    lastRow.remove(); // Remove the last row from the table
+                    updateTotal();
+                },
+                error: function (error) {
+                    console.error(error);
+                    alert("Delete failed");
+                }
+            });
+        } else {
+            alert("No rows to delete");
+        }
+    });
+
+
+
+
+    $("#new-button").click(function () {
+        newButtonClicked = true;
+        console.log("new");
+        location.reload();
+    });
+
+    
+
+</script>
+
