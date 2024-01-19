@@ -145,13 +145,11 @@
             event.preventDefault();
 
         if (deleteButtonClicked) {
-            // Reset the flag and return to avoid executing the save logic
             deleteButtonClicked = false;
             return;
         }
 
         if (newButtonClicked) {
-            // Reset the flag and return to avoid executing the save logic
             newButtonClicked = false;
             return;
         }
@@ -164,17 +162,16 @@
                 var targetedValue = $(row).find("input[name^='TargetedValue']").val();
                 var type = $(row).find("input[name^='type']:checked").val();
 
-                // Perform validation for each field (example: not empty)
                 if (!kpidNum || !kpidDescription || !targetedValue) {
                     alert("Please fill in all fields in row " + (index + 1) + ".");
                     isValid = false;
-                    return false; // Break out of the loop
+                    return false;
                 }
                 if (type === 'Percentage' && (parseFloat(targetedValue) > 100 || parseFloat(targetedValue) < 0)) {
                     console.log("heeeeere");
                     alert("For Percentage type, targetedValue in row " + (index + 1) + " should be between 0 and 100.");
                     isValid = false;
-                    return false; // Break out of the loop
+                    return false; 
                 }
             });
 
@@ -222,8 +219,7 @@
 
         var rowCount = $("#kpi-table tbody tr").length;
         if (rowCount > 0) {
-            deleteButtonClicked = true; // Set the flag to true
-            // Set the flag to true
+            deleteButtonClicked = true;
             var lastRow = $("#kpi-table tbody tr:last");
             var kpiData = {
                 KPIDNum: lastRow.find("input[name^='KPIDNum']").val(),
@@ -233,7 +229,6 @@
                 DepNo: $("#department-num").val()
             };
 
-            // Make an AJAX call to delete the last row
             $.ajax({
                 type: "DELETE",
                 url: "/Home/DeleteKPIs",
@@ -242,7 +237,7 @@
                 success: function (response) {
                     console.log(response);
                     alert(response.status);
-                    lastRow.remove(); // Remove the last row from the table
+                    lastRow.remove(); 
                     updateTotal();
                 },
                 error: function (error) {
